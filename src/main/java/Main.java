@@ -1,44 +1,41 @@
-import Components.Server.MasterTcpServer;
-import Components.Server.RedisConfig;
-import Components.Server.SlaveTcpServer;
-import Config.AppConfig;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args){
-        AnnotationConfigApplicationContext context =
-              new AnnotationConfigApplicationContext(AppConfig.class);
-        MasterTcpServer master = context.getBean(MasterTcpServer.class);
-        SlaveTcpServer slave = context.getBean(SlaveTcpServer.class);
-        RedisConfig redisConfig = context.getBean(RedisConfig.class);
+        ServerSocket serverSocket = null;
+        Socket clientSocket = null;
         int port = 6379;
-        redisConfig.setPort(port);
-        redisConfig.setRole("master");
-        for(int i=0;i<args.length;i++){
+        try {
+//            while (true){
+                serverSocket = new ServerSocket(port);
+                serverSocket.setReuseAddress(true);
+                clientSocket = serverSocket.accept();
 
-            switch(args[i]){
-                case "--port":
-                    port = Integer.parseInt(args[i+1]);
-                    redisConfig.setPort(port);
-                    break;
-                case "--replicaof":
-                    redisConfig.setRole("slave");
-//                    "<MASTER_HOST> <MASTER_PORT>"
-                    String masterHost = args[i+1].split(" ")[0];
-                    int masterPort = Integer.parseInt(args[i+1].split(" ")[1]);
+                InputStream inputStream = clientSocket.getInputStream();
+                Scanner sc = new Scanner(inputStream);
 
-                    redisConfig.setMasterHost(masterHost);
-                    redisConfig.setMasterPort(masterPort);
+                System.out.println(sc.nextLine());
+//                OutputStream outputStream = clientSocket.getOutputStream();
+//                outputStream.write("+PONG\r\n".getBytes());
+//            }
 
-                    break;
+        } catch (IOException e){
+            System.out.println("IOException: " + e.getMessage());
+        } finally {
+            try{
+                if (clientSocket != null) {
+                    clientSocket.close();
+                }
             }
-        }
-
-        if(redisConfig.getRole().equals("slave")){
-            slave.startServer();
-        }else{
-            master.startServer();
+            catch (IOException e){
+                    System.out.println("IOException: " + e.getMessage());
+            }
         }
     }
 }
